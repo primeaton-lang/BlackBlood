@@ -89,6 +89,7 @@ textarea{min-height:80px;resize:vertical}
     </div>
   </div>
 
+  <div id="conn" style="font-size:.7rem;text-align:center;padding:6px;color:#9b8fb8">v2 • Connecting…</div>
   <div id="page-dashboard" class="page active">
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-value" id="stat-players">0</div><div class="stat-label">Players</div></div>
@@ -166,6 +167,7 @@ textarea{min-height:80px;resize:vertical}
         <input type="text" id="setting-teamcode" placeholder="e.g. BLACK2026" />
       </div>
       <button class="btn" onclick="saveTeamCode()">Save Team Code</button>
+      <button class="btn btn-secondary" onclick="testDb()">Test Database</button>
     </div>
     <button class="btn btn-secondary" onclick="logout()" style="margin-top:12px">Switch Account / Logout</button>
     <p style="font-size:.75rem;color:var(--muted);margin-top:16px;text-align:center">
@@ -311,11 +313,16 @@ let listening = false;
 function startListening() {
   if (listening) return;
   listening = true;
+  const st = document.getElementById('conn');
+  db.ref('.info/connected').on('value', s => {
+    st.textContent = 'v2 • ' + (s.val() ? 'Connected to database' : 'Offline, cannot reach database');
+    st.style.color = s.val() ? '#4ade80' : '#ff6b81';
+  });
   ['players', 'logs', 'drills', 'sessions', 'vods', 'notes', 'assignments'].forEach(path => {
     db.ref(path).on('value', snap => {
       data[path] = snap.val() || {};
       renderAll();
-    }, fail);
+    }, e => { st.textContent = 'v2 • Read blocked: ' + e.message; st.style.color = '#ff6b81'; });
   });
   if (isAdmin()) {
     db.ref('settings/teamCode').on('value', snap => {
@@ -460,7 +467,7 @@ function openModal(type) {
     body.innerHTML = `
       <div class="form-group"><label>Name</label><input id="p-name" placeholder="Player name"></div>
       <div class="form-group"><label>Role</label>
-        <select id="p-role"><option>Player</option><option>IGL</option><option>Entry</option><option>Support</option><option>AWPer</option><option>Flex</option></select></div>
+        <select id="p-role"><option>Primary</option><option>Secondary</option><option>Supporter</option><option>IGL</option><option>Sniper</option><option>All Rounder</option></select></div>
       <div class="form-group"><label>Rank</label><input id="p-rank" placeholder="Optional"></div>
       <button class="btn" onclick="addPlayer()">Add Player</button>`;
   }
@@ -596,6 +603,14 @@ function addAssignment() {
   save('assignments', 'assign', {
     playerName: val('a-player'), drillName: val('a-drill'), dueDate: val('a-due'), status: 'Pending'
   });
+}
+
+function testDb() {
+  const ref = db.ref('settings/test');
+  const t = Date.now();
+  ref.set(t).then(() => ref.once('value')).then(s =>
+    alert(s.val() === t ? 'Database works: write and read OK' : 'Wrote, but read back a different value')
+  ).catch(fail);
 }
 
 function saveTeamCode() {
