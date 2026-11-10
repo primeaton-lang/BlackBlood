@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0c0a0f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>BlackBlood ESP</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+:root{--bg:#0c0a0f;--card:#1a1625;--border:#2d2640;--text:#f4f0ff;--muted:#9b8fb8;--blood:#ff2d55;--purple:#a855f7;--blue:#3b82f6;--green:#22c55e}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:85px;line-height:1.45}
+.header{background:linear-gradient(180deg,#1a1225 0%,#0c0a0f 100%);padding:16px 18px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--blood),#ff6b81);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;box-shadow:0 0 16px rgba(255,45,85,.4)}
+.logo-text h1{font-size:1.15rem;font-weight:700;background:linear-gradient(90deg,#fff,#ffb3c1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-text span{font-size:.65rem;color:var(--muted);letter-spacing:.8px}
+.role-badge{margin-left:auto;background:rgba(255,45,85,.15);color:#ff6b81;font-size:.65rem;padding:4px 10px;border-radius:20px;font-weight:600}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(19,17,26,.97);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0 14px;z-index:100}
+.nav-btn{background:none;border:none;color:var(--muted);font-size:.62rem;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 8px;border-radius:10px}
+.nav-btn.active{color:var(--blood)}
+.nav-btn svg{width:20px;height:20px}
+.page{display:none;padding:14px 14px 20px;animation:fade .25s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blood),var(--purple))}
+.stat-value{font-size:1.7rem;font-weight:700;color:#ff8fa3}
+.stat-label{font-size:.68rem;color:var(--muted);margin-top:2px;text-transform:uppercase}
+.section-title{font-size:.9rem;font-weight:600;margin:12px 0 10px;display:flex;justify-content:space-between;align-items:center}
+.list-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.list-item .title{font-weight:600;font-size:.92rem;margin-bottom:3px}
+.list-item .meta{font-size:.75rem;color:var(--muted);word-break:break-word}
+.badge{display:inline-block;font-size:.65rem;padding:2px 8px;border-radius:20px;margin-right:4px;font-weight:500}
+.badge.blood{background:rgba(255,45,85,.15);color:#ff6b81}
+.badge.purple{background:rgba(168,85,247,.15);color:#c084fc}
+.del{background:none;border:none;color:#666;font-size:1.2rem}
+.empty{text-align:center;padding:40px 16px;color:var(--muted);font-size:.88rem}
+.empty-icon{font-size:2.2rem;margin-bottom:8px;opacity:.45}
+.add-btn{background:linear-gradient(135deg,var(--blood),#ff4757);color:#fff;border:none;width:34px;height:34px;border-radius:10px;font-size:1.3rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(255,45,85,.35)}
+.btn{background:linear-gradient(135deg,var(--blood),#ff4757);color:#fff;border:none;border-radius:11px;padding:13px 18px;font-size:.92rem;font-weight:600;width:100%;box-shadow:0 4px 14px rgba(255,45,85,.3)}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text);margin-top:8px;box-shadow:none}
+.form-group{margin-bottom:14px}
+label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:5px;font-weight:500}
+input,select,textarea{width:100%;background:#12101a;border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-size:.92rem;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blood)}
+textarea{min-height:80px;resize:vertical}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:linear-gradient(180deg,#1a1625,#13111a);width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:88vh;overflow-y:auto;border-top:1px solid var(--border)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-header h3{font-size:1.1rem;font-weight:700}
+.close-btn{background:#2a2438;border:none;color:var(--muted);width:32px;height:32px;border-radius:8px;font-size:1.2rem;display:flex;align-items:center;justify-content:center}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.menu-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 12px;text-align:center;font-size:.85rem;font-weight:500}
+.menu-item .icon{font-size:1.6rem;margin-bottom:6px}
+.login-screen{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:30px 22px;text-align:center}
+.login-screen h1{font-size:1.6rem;margin-bottom:6px}
+.login-screen p{color:var(--muted);margin-bottom:28px;font-size:.9rem}
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <div class="logo-icon" style="margin:0 auto 16px;width:56px;height:56px;font-size:1.4rem">BB</div>
+  <h1>BlackBlood ESP</h1>
+  <p>Esports Performance System</p>
+  <div id="login-options">
+    <button class="btn" onclick="startAsAdmin()">I'm the IGL / Admin</button>
+    <button class="btn btn-secondary" onclick="showJoinPlayer()">Join as Player</button>
+  </div>
+  <div id="join-player-form" style="display:none;text-align:left;margin-top:10px">
+    <div class="form-group"><label>Team Code</label><input type="text" id="join-code" placeholder="Enter Team Code" /></div>
+    <div class="form-group"><label>Your Name</label><input type="text" id="join-name" placeholder="Your in-game name" /></div>
+    <button class="btn" onclick="joinAsPlayer()">Join Team</button>
+    <button class="btn btn-secondary" onclick="backToLoginOptions()">Back</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">BB</div>
+      <div class="logo-text"><h1>BlackBlood</h1><span>ESP • PERFORMANCE</span></div>
+      <div class="role-badge" id="role-badge">ADMIN</div>
+    </div>
+  </div>
+
+  <div id="page-dashboard" class="page active">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-value" id="stat-players">0</div><div class="stat-label">Players</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-logs">0</div><div class="stat-label">Logs</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-drills">0</div><div class="stat-label">Drills</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-sessions">0</div><div class="stat-label">Sessions</div></div>
+    </div>
+    <div class="section-title">Recent Activity</div>
+    <div id="recent-activity"></div>
+  </div>
+
+  <div id="page-players" class="page">
+    <div class="section-title"><span>Team Roster</span><button class="add-btn" id="btn-add-player" onclick="openModal('player')" style="display:none">+</button></div>
+    <div id="players-list"></div>
+  </div>
+
+  <div id="page-logs" class="page">
+    <div class="section-title"><span>Training Logs</span><button class="add-btn" onclick="openModal('log')">+</button></div>
+    <div id="logs-list"></div>
+  </div>
+
+  <div id="page-drills" class="page">
+    <div class="section-title"><span>Drill Library</span><button class="add-btn" id="btn-add-drill" onclick="openModal('drill')" style="display:none">+</button></div>
+    <div id="drills-list"></div>
+  </div>
+
+  <div id="page-more" class="page">
+    <div class="section-title">More</div>
+    <div class="menu-grid">
+      <div class="menu-item" onclick="showPage('sessions')"><div class="icon">📅</div>Sessions</div>
+      <div class="menu-item" onclick="showPage('leaderboard')"><div class="icon">🏆</div>Leaderboard</div>
+      <div class="menu-item" onclick="showPage('weekly')"><div class="icon">📈</div>Weekly</div>
+      <div class="menu-item" onclick="showPage('vods')"><div class="icon">🎬</div>VODs</div>
+      <div class="menu-item" onclick="showPage('notes')"><div class="icon">📝</div>Notes</div>
+      <div class="menu-item" onclick="showPage('assignments')"><div class="icon">🎯</div>Assignments</div>
+      <div class="menu-item" onclick="showPage('settings')"><div class="icon">⚙️</div>Settings</div>
+    </div>
+  </div>
+
+  <div id="page-sessions" class="page">
+    <div class="section-title"><span>Team Sessions</span><button class="add-btn" id="btn-add-session" onclick="openModal('session')" style="display:none">+</button></div>
+    <div id="sessions-list"></div>
+  </div>
+
+  <div id="page-leaderboard" class="page">
+    <div class="section-title">Leaderboard (Hours)</div>
+    <div id="leaderboard-list"></div>
+  </div>
+
+  <div id="page-weekly" class="page">
+    <div class="section-title">This Week Summary</div>
+    <div id="weekly-summary"></div>
+  </div>
+
+  <div id="page-vods" class="page">
+    <div class="section-title"><span>VOD Links</span><button class="add-btn" onclick="openModal('vod')">+</button></div>
+    <div id="vods-list"></div>
+  </div>
+
+  <div id="page-notes" class="page">
+    <div class="section-title"><span>Notes & Feedback</span><button class="add-btn" onclick="openModal('note')">+</button></div>
+    <div id="notes-list"></div>
+  </div>
+
+  <div id="page-assignments" class="page">
+    <div class="section-title"><span>Drill Assignments</span><button class="add-btn" id="btn-add-assignment" onclick="openModal('assignment')" style="display:none">+</button></div>
+    <div id="assignments-list"></div>
+  </div>
+
+  <div id="page-settings" class="page">
+    <div class="section-title">Settings</div>
+    <div id="admin-settings" style="display:none">
+      <div class="form-group">
+        <label>Team Code (share this with players)</label>
+        <input type="text" id="setting-teamcode" placeholder="e.g. BLACK2026" />
+      </div>
+      <button class="btn" onclick="saveTeamCode()">Save Team Code</button>
+    </div>
+    <button class="btn btn-secondary" onclick="logout()" style="margin-top:12px">Switch Account / Logout</button>
+    <p style="font-size:.75rem;color:var(--muted);margin-top:16px;text-align:center">
+      Current role: <span id="settings-role">Admin</span>
+    </p>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="showPage('dashboard',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>Home
+    </button>
+    <button class="nav-btn" onclick="showPage('players',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Players
+    </button>
+    <button class="nav-btn" onclick="showPage('logs',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>Logs
+    </button>
+    <button class="nav-btn" onclick="showPage('drills',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Drills
+    </button>
+    <button class="nav-btn" onclick="showPage('more',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>More
+    </button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-title">Add</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ========== FIREBASE ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyAkbK4J9LmzYQmmqvBCLFtDAQtDg4E-dL8",
+  authDomain: "blackblood-esp-b2951.firebaseapp.com",
+  databaseURL: "https://blackblood-esp-b2951-default-rtdb.firebaseio.com",
+  projectId: "blackblood-esp-b2951",
+  storageBucket: "blackblood-esp-b2951.firebasestorage.app",
+  messagingSenderId: "434906383875",
+  appId: "1:434906383875:web:64c3314b57066089c83036"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ========== HELPERS ==========
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function safeUrl(u) { return /^https?:\/\//i.test(u || '') ? u : ''; }
+function fail(e) { console.error(e); alert('Error: ' + (e && e.message ? e.message : e)); }
+function isAdmin() { return currentUser && currentUser.role === 'admin'; }
+function today() { return new Date().toISOString().slice(0, 10); }
+function delBtn(path, id) {
+  return '<button class="del" data-path="' + esc(path) + '" data-id="' + esc(id) + '">×</button>';
+}
+
+// ========== STATE ==========
+let currentUser = null;
+try { currentUser = JSON.parse(localStorage.getItem('bb_user') || 'null'); } catch (e) {}
+let data = { players: {}, logs: {}, drills: {}, sessions: {}, vods: {}, notes: {}, assignments: {} };
+
+// ========== INIT ==========
+if (currentUser) enterApp();
+
+function enterApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('role-badge').textContent = currentUser.role.toUpperCase();
+  document.getElementById('settings-role').textContent = currentUser.role;
+  document.getElementById('admin-settings').style.display = isAdmin() ? 'block' : 'none';
+  updateAdminButtons();
+  startListening();
+}
+
+function startAsAdmin() {
+  db.ref('settings/adminPass').once('value').then(snap => {
+    const real = snap.val();
+    if (!real) {
+      const p = prompt('No admin passcode set yet. Create one:');
+      if (!p) return;
+      return db.ref('settings/adminPass').set(p).then(finishAdmin);
+    }
+    const p = prompt('Admin passcode:');
+    if (p === null) return;
+    if (p !== real) return alert('Wrong passcode');
+    finishAdmin();
+  }).catch(fail);
+}
+
+function finishAdmin() {
+  currentUser = { name: 'IGL', role: 'admin', id: 'admin' };
+  localStorage.setItem('bb_user', JSON.stringify(currentUser));
+  enterApp();
+}
+
+function showJoinPlayer() {
+  document.getElementById('login-options').style.display = 'none';
+  document.getElementById('join-player-form').style.display = 'block';
+}
+function backToLoginOptions() {
+  document.getElementById('join-player-form').style.display = 'none';
+  document.getElementById('login-options').style.display = 'block';
+}
+
+function joinAsPlayer() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  const name = document.getElementById('join-name').value.trim();
+  if (!code || !name) return alert('Please fill both fields');
+
+  db.ref('settings/teamCode').once('value').then(snap => {
+    const realCode = snap.val();
+    if (!realCode) return alert('Admin has not set a Team Code yet');
+    if (code !== String(realCode).toUpperCase()) return alert('Wrong Team Code');
+
+    const id = 'player_' + Date.now();
+    return db.ref('players/' + id).set({
+      name, role: 'Player', joinedAt: new Date().toISOString()
+    }).then(() => {
+      currentUser = { name, role: 'player', id };
+      localStorage.setItem('bb_user', JSON.stringify(currentUser));
+      enterApp();
+    });
+  }).catch(fail);
+}
+
+function updateAdminButtons() {
+  ['btn-add-player', 'btn-add-drill', 'btn-add-session', 'btn-add-assignment'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isAdmin() ? 'flex' : 'none';
+  });
+}
+
+function logout() {
+  localStorage.removeItem('bb_user');
+  location.reload();
+}
+
+// ========== LISTEN ==========
+let listening = false;
+function startListening() {
+  if (listening) return;
+  listening = true;
+  ['players', 'logs', 'drills', 'sessions', 'vods', 'notes', 'assignments'].forEach(path => {
+    db.ref(path).on('value', snap => {
+      data[path] = snap.val() || {};
+      renderAll();
+    }, fail);
+  });
+  if (isAdmin()) {
+    db.ref('settings/teamCode').on('value', snap => {
+      document.getElementById('setting-teamcode').value = snap.val() || '';
+    });
+  }
+}
+
+// ========== RENDER ==========
+function toArr(obj) { return Object.entries(obj || {}).map(([id, v]) => ({ id, ...v })); }
+function emptyBox(icon, text) { return '<div class="empty"><div class="empty-icon">' + icon + '</div>' + text + '</div>'; }
+
+function renderAll() {
+  if (!currentUser) return;
+  const players = toArr(data.players), logs = toArr(data.logs), drills = toArr(data.drills);
+  const sessions = toArr(data.sessions), vods = toArr(data.vods), notes = toArr(data.notes);
+  const assignments = toArr(data.assignments);
+
+  document.getElementById('stat-players').textContent = players.length;
+  document.getElementById('stat-logs').textContent = logs.length;
+  document.getElementById('stat-drills').textContent = drills.length;
+  document.getElementById('stat-sessions').textContent = sessions.length;
+
+  // Recent
+  const recent = [...logs].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+  document.getElementById('recent-activity').innerHTML = recent.length ? recent.map(l =>
+    `<div class="list-item"><div><div class="title">${esc(l.playerName)}</div>
+     <div class="meta">${esc(l.date)} • ${esc(l.sessionType)} • ${esc(l.duration)} min</div></div></div>`
+  ).join('') : emptyBox('📊', 'No activity yet');
+
+  // Players
+  document.getElementById('players-list').innerHTML = players.length ? players.map(p =>
+    `<div class="list-item"><div><div class="title">${esc(p.name)}</div>
+     <div class="meta"><span class="badge blood">${esc(p.role || 'Player')}</span>
+     ${p.rank ? `<span class="badge purple">${esc(p.rank)}</span>` : ''}</div></div>
+     ${isAdmin() ? delBtn('players', p.id) : ''}</div>`
+  ).join('') : emptyBox('👥', 'No players yet');
+
+  // Logs
+  document.getElementById('logs-list').innerHTML = logs.length ? [...logs].reverse().map(l => {
+    const mine = l.playerId ? l.playerId === currentUser.id : l.playerName === currentUser.name;
+    return `<div class="list-item"><div><div class="title">${esc(l.playerName)}</div>
+     <div class="meta">${esc(l.date)} • ${esc(l.sessionType)} • ${esc(l.duration)} min</div>
+     ${l.focus ? `<div class="meta">Focus: ${esc(l.focus)}</div>` : ''}
+     ${l.notes ? `<div class="meta" style="opacity:.8">${esc(l.notes)}</div>` : ''}</div>
+     ${(isAdmin() || mine) ? delBtn('logs', l.id) : ''}</div>`;
+  }).join('') : emptyBox('📝', 'No logs yet');
+
+  // Drills
+  document.getElementById('drills-list').innerHTML = drills.length ? drills.map(d =>
+    `<div class="list-item"><div><div class="title">${esc(d.name)}</div>
+     <div class="meta"><span class="badge blood">${esc(d.category)}</span><span class="badge purple">${esc(d.difficulty)}</span></div>
+     ${d.description ? `<div class="meta">${esc(d.description)}</div>` : ''}</div>
+     ${isAdmin() ? delBtn('drills', d.id) : ''}</div>`
+  ).join('') : emptyBox('⚡', 'No drills yet');
+
+  // Sessions
+  document.getElementById('sessions-list').innerHTML = sessions.length ? [...sessions].reverse().map(s =>
+    `<div class="list-item"><div><div class="title">${esc(s.type)}</div>
+     <div class="meta">${esc(s.date)} • ${esc(s.duration || '?')} min</div>
+     ${s.focus ? `<div class="meta">Focus: ${esc(s.focus)}</div>` : ''}
+     ${s.notes ? `<div class="meta">${esc(s.notes)}</div>` : ''}</div>
+     ${isAdmin() ? delBtn('sessions', s.id) : ''}</div>`
+  ).join('') : emptyBox('📅', 'No sessions yet');
+
+  // Leaderboard (grouped by player id when available, else name)
+  const totals = {};
+  logs.forEach(l => {
+    const key = l.playerId || ('name:' + l.playerName);
+    if (!totals[key]) totals[key] = { name: l.playerName, mins: 0 };
+    totals[key].mins += parseInt(l.duration) || 0;
+  });
+  const ranked = Object.values(totals).sort((a, b) => b.mins - a.mins);
+  document.getElementById('leaderboard-list').innerHTML = ranked.length ? ranked.map((r, i) =>
+    `<div class="list-item"><div><div class="title">#${i + 1} ${esc(r.name)}</div>
+     <div class="meta">${(r.mins / 60).toFixed(1)} hours trained</div></div></div>`
+  ).join('') : emptyBox('🏆', 'No data yet');
+
+  // Weekly
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekLogs = logs.filter(l => new Date(l.date) >= weekAgo);
+  const weekMins = weekLogs.reduce((s, l) => s + (parseInt(l.duration) || 0), 0);
+  document.getElementById('weekly-summary').innerHTML =
+    `<div class="stat-card" style="margin-bottom:12px"><div class="stat-value">${weekLogs.length}</div><div class="stat-label">Sessions this week</div></div>
+     <div class="stat-card"><div class="stat-value">${(weekMins / 60).toFixed(1)}h</div><div class="stat-label">Total hours this week</div></div>`;
+
+  // VODs
+  document.getElementById('vods-list').innerHTML = vods.length ? [...vods].reverse().map(v => {
+    const url = safeUrl(v.url);
+    return `<div class="list-item"><div><div class="title">${esc(v.title || 'VOD')}</div>
+     <div class="meta">${esc(v.playerName)} • ${esc(v.date)}</div>
+     <div class="meta">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa">${esc(url)}</a>` : esc(v.url)}</div></div>
+     ${(isAdmin() || v.playerName === currentUser.name) ? delBtn('vods', v.id) : ''}</div>`;
+  }).join('') : emptyBox('🎬', 'No VODs yet');
+
+  // Notes (players only see notes to them, to All, or from them)
+  const visibleNotes = notes.filter(n => isAdmin() || n.from === currentUser.name ||
+    String(n.to).toLowerCase() === 'all' || String(n.to).toLowerCase() === currentUser.name.toLowerCase());
+  document.getElementById('notes-list').innerHTML = visibleNotes.length ? [...visibleNotes].reverse().map(n =>
+    `<div class="list-item"><div><div class="title">${esc(n.from)} → ${esc(n.to)}</div>
+     <div class="meta">${esc(n.date)}</div><div class="meta">${esc(n.message)}</div></div>
+     ${(isAdmin() || n.from === currentUser.name) ? delBtn('notes', n.id) : ''}</div>`
+  ).join('') : emptyBox('📝', 'No notes yet');
+
+  // Assignments (players see only theirs)
+  const myAssign = assignments.filter(a => isAdmin() ||
+    String(a.playerName).toLowerCase() === currentUser.name.toLowerCase());
+  document.getElementById('assignments-list').innerHTML = myAssign.length ? myAssign.map(a =>
+    `<div class="list-item"><div><div class="title">${esc(a.drillName)}</div>
+     <div class="meta">For: ${esc(a.playerName)} • Due: ${esc(a.dueDate || 'No due date')}</div>
+     <div class="meta">Status: ${esc(a.status || 'Pending')}</div></div>
+     ${isAdmin() ? delBtn('assignments', a.id) : ''}</div>`
+  ).join('') : emptyBox('🎯', 'No assignments yet');
+}
+
+// Delete via event delegation (no inline handlers with data in them)
+document.addEventListener('click', e => {
+  const b = e.target.closest('.del');
+  if (!b) return;
+  if (confirm('Delete this item?')) db.ref(b.dataset.path + '/' + b.dataset.id).remove().catch(fail);
+});
+
+// ========== NAVIGATION ==========
+function showPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (['sessions', 'leaderboard', 'weekly', 'vods', 'notes', 'assignments', 'settings'].includes(page)) {
+    document.querySelectorAll('.nav-btn')[4].classList.add('active');
+  }
+}
+
+// ========== MODALS ==========
+function openModal(type) {
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const d = today();
+
+  if (type === 'player') {
+    title.textContent = 'Add Player';
+    body.innerHTML = `
+      <div class="form-group"><label>Name</label><input id="p-name" placeholder="Player name"></div>
+      <div class="form-group"><label>Role</label>
+        <select id="p-role"><option>Player</option><option>IGL</option><option>Entry</option><option>Support</option><option>AWPer</option><option>Flex</option></select></div>
+      <div class="form-group"><label>Rank</label><input id="p-rank" placeholder="Optional"></div>
+      <button class="btn" onclick="addPlayer()">Add Player</button>`;
+  }
+
+  if (type === 'log') {
+    title.textContent = 'Log Training';
+    const playerField = isAdmin()
+      ? `<div class="form-group"><label>Player</label><input id="l-player" placeholder="Player name"></div>`
+      : `<input type="hidden" id="l-player" value="${esc(currentUser.name)}">`;
+    body.innerHTML = `${playerField}
+      <div class="form-group"><label>Date</label><input type="date" id="l-date" value="${d}"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="l-type"><option>Individual</option><option>Team Practice</option><option>Scrim</option><option>VOD Review</option><option>Aim Training</option></select></div>
+      <div class="form-group"><label>Duration (min)</label><input type="number" id="l-duration" placeholder="90"></div>
+      <div class="form-group"><label>Focus</label><input id="l-focus" placeholder="Aim, Utility..."></div>
+      <div class="form-group"><label>Notes</label><textarea id="l-notes"></textarea></div>
+      <button class="btn" onclick="addLog()">Save Log</button>`;
+  }
+
+  if (type === 'drill') {
+    title.textContent = 'Add Drill';
+    body.innerHTML = `
+      <div class="form-group"><label>Name</label><input id="d-name"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="d-category"><option>Aim</option><option>Movement</option><option>Utility</option><option>Game Sense</option><option>Communication</option></select></div>
+      <div class="form-group"><label>Difficulty</label>
+        <select id="d-difficulty"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
+      <div class="form-group"><label>Description</label><textarea id="d-desc"></textarea></div>
+      <button class="btn" onclick="addDrill()">Add Drill</button>`;
+  }
+
+  if (type === 'session') {
+    title.textContent = 'Add Session';
+    body.innerHTML = `
+      <div class="form-group"><label>Type</label>
+        <select id="s-type"><option>Team Practice</option><option>Scrim</option><option>VOD Review</option><option>Meeting</option><option>Tournament</option></select></div>
+      <div class="form-group"><label>Date</label><input type="date" id="s-date" value="${d}"></div>
+      <div class="form-group"><label>Duration (min)</label><input type="number" id="s-duration"></div>
+      <div class="form-group"><label>Focus</label><input id="s-focus"></div>
+      <div class="form-group"><label>Notes</label><textarea id="s-notes"></textarea></div>
+      <button class="btn" onclick="addSession()">Save</button>`;
+  }
+
+  if (type === 'vod') {
+    title.textContent = 'Add VOD';
+    body.innerHTML = `
+      <div class="form-group"><label>Title</label><input id="v-title" placeholder="Scrim vs Team X"></div>
+      <div class="form-group"><label>URL</label><input id="v-url" placeholder="https://..."></div>
+      <div class="form-group"><label>Date</label><input type="date" id="v-date" value="${d}"></div>
+      <button class="btn" onclick="addVod()">Add VOD</button>`;
+  }
+
+  if (type === 'note') {
+    title.textContent = 'Send Note';
+    body.innerHTML = `
+      <div class="form-group"><label>To (player name or All)</label><input id="n-to" placeholder="Player name or All"></div>
+      <div class="form-group"><label>Message</label><textarea id="n-message"></textarea></div>
+      <button class="btn" onclick="addNote()">Send</button>`;
+  }
+
+  if (type === 'assignment') {
+    title.textContent = 'Assign Drill';
+    body.innerHTML = `
+      <div class="form-group"><label>Player</label><input id="a-player"></div>
+      <div class="form-group"><label>Drill Name</label><input id="a-drill"></div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="a-due"></div>
+      <button class="btn" onclick="addAssignment()">Assign</button>`;
+  }
+
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+function val(id) { return document.getElementById(id).value.trim(); }
+function save(path, prefix, obj) {
+  return db.ref(path + '/' + prefix + '_' + Date.now()).set(obj).then(closeModal).catch(fail);
+}
+
+// ========== ADD FUNCTIONS ==========
+function addPlayer() {
+  const name = val('p-name');
+  if (!name) return alert('Name required');
+  save('players', 'player', { name, role: val('p-role'), rank: val('p-rank'), joinedAt: new Date().toISOString() });
+}
+
+function addLog() {
+  const playerName = val('l-player');
+  if (!playerName) return alert('Player name required');
+  const obj = {
+    playerName,
+    date: val('l-date'),
+    sessionType: val('l-type'),
+    duration: parseInt(val('l-duration')) || 0,
+    focus: val('l-focus'),
+    notes: val('l-notes')
+  };
+  if (!isAdmin()) obj.playerId = currentUser.id;
+  else {
+    const match = toArr(data.players).find(p => p.name.toLowerCase() === playerName.toLowerCase());
+    if (match) obj.playerId = match.id;
+  }
+  save('logs', 'log', obj);
+}
+
+function addDrill() {
+  const name = val('d-name');
+  if (!name) return alert('Name required');
+  save('drills', 'drill', { name, category: val('d-category'), difficulty: val('d-difficulty'), description: val('d-desc') });
+}
+
+function addSession() {
+  save('sessions', 'session', {
+    type: val('s-type'), date: val('s-date'),
+    duration: parseInt(val('s-duration')) || 0,
+    focus: val('s-focus'), notes: val('s-notes')
+  });
+}
+
+function addVod() {
+  const url = val('v-url');
+  if (!safeUrl(url)) return alert('URL must start with http:// or https://');
+  save('vods', 'vod', { title: val('v-title'), url, date: val('v-date'), playerName: currentUser.name });
+}
+
+function addNote() {
+  const message = val('n-message');
+  if (!message) return alert('Message required');
+  save('notes', 'note', { from: currentUser.name, to: val('n-to') || 'All', message, date: today() });
+}
+
+function addAssignment() {
+  if (!val('a-player') || !val('a-drill')) return alert('Player and drill required');
+  save('assignments', 'assign', {
+    playerName: val('a-player'), drillName: val('a-drill'), dueDate: val('a-due'), status: 'Pending'
+  });
+}
+
+function saveTeamCode() {
+  const code = val('setting-teamcode').toUpperCase();
+  if (!code) return alert('Enter a code');
+  db.ref('settings/teamCode').set(code).then(() =>
+    alert('Team Code saved! Share this code with your players: ' + code)
+  ).catch(fail);
+}
+
+document.getElementById('modal').addEventListener('click', function (e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
